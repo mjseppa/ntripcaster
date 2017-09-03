@@ -1,0 +1,11 @@
+Makefile
+conf/Makefile
+conf/ntripcaster.conf.dist
+config.log
+config.status
+src/.deps/
+src/Makefile
+src/*.o
+stamp-h
+src/ntripcaster
+
