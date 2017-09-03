@@ -120,8 +120,9 @@ splitc (char *first, char *rest, const char divider)
 
 	*p = 0;
 	if (first != NULL) strcpy(first, rest);
-	if (first != rest) strcpy(rest, p + 1);
-
+	char * temp = strdup(p+1);
+	if (first != rest) strcpy(rest, temp);
+	free(temp);
 	return rest;
 }
 
