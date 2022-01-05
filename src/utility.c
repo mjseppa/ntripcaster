@@ -511,6 +511,9 @@ print_startup_server_info ()
 	if (info.server_name)
 		write_log (LOG_DEFAULT, "Using '%s' as servername...", info.server_name);
 
+	if (info.statuspage_login)
+		write_log (LOG_DEFAULT, "Statuspage password '%s'", info.statuspage_login);
+
 	write_log(LOG_DEFAULT, "Server limits: %d clients, %d clients per source, %d sources",
 		  info.max_clients, info.max_clients_per_source, info.max_sources);
 }
@@ -1148,10 +1151,11 @@ set_element configfile_settings[] =
 	{ "max_sources", integer_e,      "Highest number of source connections", NULL },
 	{ "logfile", string_e,           "Logfile to write to", NULL },
 	{ "server_name", string_e,	 "Server's hostname", NULL},
+	{ "statuspage_login", string_e,   "Statuspage username:pass", NULL},
 	{ "max_clients_per_source", integer_e, "Max number of clients listening on one source", NULL},
 	{ "location", string_e, "NtripCaster server geographical location", NULL},
 	{ "rp_email", string_e, "Resposible person email", NULL},
-  { "server_url", string_e, "URL for this NtripCaster server", NULL},
+	{ "server_url", string_e, "URL for this NtripCaster server", NULL},
 	{ "logdir", string_e, "Directory for log files", NULL},
 	{ (char *) NULL, 0, (char *) NULL, NULL }
 };
@@ -1166,6 +1170,7 @@ setup_config_file_settings()
 	configfile_settings[x++].setting = &info.max_sources;
 	configfile_settings[x++].setting = &info.logfilename;
 	configfile_settings[x++].setting = &info.server_name;
+	configfile_settings[x++].setting = &info.statuspage_login;
 	configfile_settings[x++].setting = &info.max_clients_per_source;
 	configfile_settings[x++].setting = &info.location;
 	configfile_settings[x++].setting = &info.rp_email;

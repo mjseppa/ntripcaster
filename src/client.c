@@ -89,6 +89,10 @@
 #include "log.h"
 #include "source.h"
 #include "sock.h"
+#include <math.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 /* basic.c. ajd ****************************************************/
 
@@ -162,6 +166,20 @@ void client_login(connection_t *con, char *expr)
 	if (((req.path[0] == '/') && (req.path[1] == '\0')) || (req.path[0] == '\0')) {
 		send_sourcetable(con);
 		kick_not_connected (con, "Sourcetable transferred");
+		return;
+	}
+
+	if ( info.statuspage_login && ice_strcmp("/status", req.path) == 0  )  {
+		if (authenticate_status_request (con, &req, info.statuspage_login))
+		{
+			send_sourcestats(con);
+			kick_not_connected (con, "Sourcestats transferred");
+		}
+		else
+		{
+			write_401 (con, req.path);
+			kick_not_connected (con, "Invalid status login");
+		}
 		return;
 	}
 	
@@ -407,6 +425,104 @@ send_sourcetable (connection_t *con) {
 }
 
 
+void timesince(unsigned long start, char* target)
+{
+	double l_uptime = get_time()-start;
+	int days = (int)floor(l_uptime/(60*60*24));
+	l_uptime -= days*60*60*24;
+	int hours = (int)floor(l_uptime/(60*60));
+	l_uptime -= hours*60*60;
+	int mins = (int)floor(l_uptime/(60));
+	int seconds = (int)floor(l_uptime-mins*60);
+	sprintf(target, "%dd, %dh, %dm, %ds", days, hours, mins, seconds);
+}
+
+
+void b_to_string(unsigned long size, char* target)
+{
+	unsigned long tempsize = size;
+	if (tempsize < 1025)
+	{
+		sprintf(target, "%lu b", tempsize);
+		return;
+	}
+	tempsize = tempsize>>10;
+	if (tempsize < 1025)
+	{
+		sprintf(target, "%lu kb", tempsize);
+		return;
+	}
+	tempsize = tempsize>>10;
+	if (tempsize < 1025)
+	{
+		sprintf(target, "%lu Mb", tempsize);
+		return;
+	}
+	double gsize = tempsize/1024.0;
+	sprintf(target, "%f Gb", gsize);
+	return;
+
+}
+
+void send_sourcestats (connection_t *con) {
+
+	write_http_header (con->sock, 200, "OK");
+	sock_write_line (con->sock, "Content-Type: text/plain");
+	sock_write_line (con->sock, "");
+	avl_traverser trav = {0};
+
+	connection_t *conn;
+	int count = 0;
+	while ((conn = avl_traverse(info.sources, &trav)) != NULL)
+	{
+		char uptime[100], readsize[50];
+		if (conn->food.source != NULL && conn->food.source->connected == 1)
+		{
+			count++;
+			timesince(conn->connect_time, uptime);
+			b_to_string((conn->food.source->stats.read_kilos<<10) + conn->food.source->stats.read_bytes, readsize);
+			sock_write_line (con->sock, "%s, Clients %d, Uptime: %s, Read data: %s", conn->food.source->audiocast.mount, conn->food.source->num_clients, uptime, readsize);
+			avl_traverser trav_cli = {0};
+			connection_t *conn_cli;
+			if (conn->food.source->num_clients > 0)
+			{
+				sock_write_line (con->sock, "Clients:");
+			}
+			int o = 0;
+			while ((conn_cli = avl_traverse(conn->food.source->clients, &trav_cli)) != NULL)
+			{
+				o++;
+				char* sourceaddr;
+				sourceaddr = inet_ntoa(conn_cli->sin->sin_addr);
+				timesince(conn_cli->connect_time, uptime);
+				b_to_string(conn_cli->food.client->write_bytes, readsize);
+				sock_write_line (con->sock, "\t%d: %s: %s, Connect time: %s (%s)", o, conn_cli->user, sourceaddr, uptime, readsize);
+			}
+		}
+	}
+	if (count == 0)
+	{
+		sock_write_line (con->sock, "No sources");
+	}
+	sock_write_line (con->sock, "");
+	char writesize[50], readsize[50];
+	thread_mutex_lock(&info.misc_mutex);
+	b_to_string(info.hourly_stats.read_bytes, readsize);
+	b_to_string(info.hourly_stats.write_bytes, writesize);
+	sock_write_line (con->sock, "Hourly sources:%d (%s), clients %d (%s)", info.hourly_stats.source_connections, readsize, info.hourly_stats.client_connections, writesize);
+	b_to_string(info.daily_stats.read_bytes, readsize);
+	b_to_string(info.daily_stats.write_bytes, writesize);
+	sock_write_line (con->sock, "Daily sources:%d (%s), clients %d (%s)", info.hourly_stats.source_connections, readsize, info.hourly_stats.client_connections, writesize);
+	b_to_string(info.total_stats.read_bytes, readsize);
+	b_to_string(info.total_stats.write_bytes, writesize);
+	thread_mutex_unlock(&info.misc_mutex);
+	sock_write_line (con->sock, "Total sources:%d (%s), clients %d (%s)", info.hourly_stats.source_connections, readsize, info.hourly_stats.client_connections, writesize);
+
+	char uptime[100];
+	timesince(info.server_start_time, uptime);
+	sock_write_line (con->sock, "Uptime %s", uptime);
+}
+
 /* basic.c. ajd ********************************************************************/
 
 void rehash_authentication_scheme()
@@ -461,6 +577,61 @@ void destroy_authentication_scheme()
 	free_mount_tree(mounttree);
 	free_user_tree(usertree);
 }
+
+int
+authenticate_status_request(connection_t *con, request_t *req, char *login)
+{
+
+	ice_user_t checkuser;
+
+	//rehash_authentication_scheme();
+
+	//print_authentication_scheme();
+
+	if (con_get_user(con, &checkuser) == NULL) return 0;
+
+		xa_debug(1, "DEBUG: Checking authentication for statuspage with user %s and pass %s", nullcheck_string (checkuser.name),
+				nullcheck_string (checkuser.pass));
+
+	char *tempstring, statususer[50], statuspass[50], *templogin = malloc(50 * sizeof(char));
+	if (!login)
+	{
+		return 0;
+	}
+	strcpy(templogin,login);
+
+	int x = 0;
+	while ((tempstring = strsep(&templogin, ":")) != NULL )
+	{
+		x++;
+		if (x == 1)
+			strcpy(statususer,tempstring);
+		if (x == 2)
+			strcpy(statuspass,tempstring);
+	}
+	nfree(templogin);
+	nfree(tempstring);
+	if (x != 2)
+	{
+		nfree(checkuser.name);
+		nfree(checkuser.pass);
+		return 0;
+	}
+	if ((strncmp(checkuser.name, statususer, BUFSIZE) == 0) && (strncmp(checkuser.pass, statuspass, BUFSIZE) == 0)) {
+		nfree(checkuser.name);
+		nfree(checkuser.pass);
+		return 1;
+	}
+
+
+	xa_debug(1, "DEBUG: Statuspage authentication failed. Invalid user/password");
+	nfree(checkuser.name);
+	nfree(checkuser.pass);
+
+	return 0;
+
+}
+
 
 int
 authenticate_user_request(connection_t *con, request_t *req)

@@ -52,6 +52,7 @@ int client_errors (const client_t *client);
 void greet_client(connection_t *con, source_t *source);
 const char *client_type (const connection_t *clicon);
 void send_sourcetable (connection_t *con);
+void send_sourcestats (connection_t *con);
 #endif
 
 
@@ -74,6 +75,7 @@ void init_authentication_scheme();
 void parse_authentication_scheme();
 void destroy_authentication_scheme();
 int authenticate_user_request(connection_t * con, request_t * req);
+int authenticate_status_request(connection_t * con, request_t * req, char * login);
 mount_t *need_authentication(request_t * req);
 void rehash_authentication_scheme();
 ice_user_t *con_get_user(connection_t * con, ice_user_t * outuser);

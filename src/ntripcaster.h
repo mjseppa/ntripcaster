@@ -280,6 +280,7 @@ typedef struct {
 	int statustime;
 	char *myhostname;	/* NULL unless bind to specific ip */
 	char *server_name;	/* Server name */
+	char *statuspage_login;  /* Status username:password */
 	char *version;
 	char *ntrip_version;
 	char *timezone;
