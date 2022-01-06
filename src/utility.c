@@ -962,30 +962,6 @@ get_icecast_file(const char *filename, filetype_t type, int flags)
 	return NULL;
 }
 
-#define KILO (32*32)
-void
-stat_add_read (statistics_t *stat, int len)
-{
-	while (stat->read_bytes + len >= KILO)
-	{
-		stat->read_kilos++;
-		len -= KILO;
-	}
-
-	stat->read_bytes += len;
-}
-
-void
-stat_add_write (statistics_t *stat, int len)
-{
-	while (stat->write_bytes + len >= KILO)
-	{
-		stat->write_kilos++;
-		len -= KILO;
-	}
-
-	stat->write_bytes += len;
-}
 
 char *
 type_of_str (contype_t type, char *buf)

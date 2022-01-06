@@ -508,7 +508,7 @@ add_chunk (connection_t *con)
 			}
 		} else if (len > 0) {
 			read_bytes += len;
-			stat_add_read(&con->food.source->stats, len);
+			con->food.source->stats.read_bytes += len;;
 			info.hourly_stats.read_bytes += len;
 		} else {
 			my_sleep(READ_RETRY_DELAY * 1000);
@@ -602,8 +602,8 @@ write_chunk(source_t *source, connection_t *clicon)
 		}
 
 		clicon->food.client->write_bytes += write_bytes;
+		source->stats.write_bytes += write_bytes;
 		info.hourly_stats.write_bytes += write_bytes;
-		stat_add_write (&source->stats, write_bytes);
 		
 		if (write_bytes + clicon->food.client->offset >= source->chunk[clicon->food.client->cid].len) {
 			source->chunk[clicon->food.client->cid].clients_left--;

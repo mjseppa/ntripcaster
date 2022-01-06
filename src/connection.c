@@ -148,9 +148,8 @@ void *handle_connection(void *arg)
 		write_log(LOG_DEFAULT, "handle_connection: got NULL connection");
 		thread_exit(0);
 	}
-
-	if (info.reverse_lookups)
-		con->hostname = reverse(con->host);
+	//if (info.reverse_lookups)
+	con->hostname = reverse(con->host);
 
 	sock_set_blocking(con->sock, SOCK_BLOCK);
 	

@@ -105,7 +105,7 @@ void status_write(server_info_t *infostruct)
 
 //	if (running == SERVER_RUNNING) info.num_clients = (unsigned long int) count_clients();
 
-	write_log(LOG_DEFAULT, "Bandwidth:%fKB/s Sources:%ld Clients:%ld", info.bandwidth_usage, info.num_sources, info.num_clients);
+	write_log(LOG_DEFAULT, "Bandwidth:%fKB/s Sources:%ld Clients:%ld", info.bandwidth_usage/1024.0, info.num_sources, info.num_clients);
 
 	if (lt)
 		free(lt);
@@ -190,7 +190,7 @@ timer_handle_transfer_statistics (time_t stime, time_t *trottime, time_t *juston
 				*trottime = get_time();
 				get_running_stats(trotstat);
 			} else {
-				total_bytes = (stat.read_kilos - trotstat->read_kilos) + (stat.write_kilos - trotstat->write_kilos);
+				total_bytes = ((stat.read_bytes) - (trotstat->read_bytes)) + ((stat.write_bytes) - (trotstat->write_bytes));
 				delta = get_time() - *trottime;
 				if (delta <= 0) {
 					write_log(LOG_DEFAULT, 
@@ -229,7 +229,7 @@ void write_hourly_stats(statistics_t *stat)
 	statistics_t running;
 
 	get_current_stats(&running);
-	add_stats(stat, &running, 0);
+	add_stats(stat, &running);
 
 	strncpy(cct, connect_average (stat->client_connect_time, stat->client_connections + info.num_clients, timebuf), BUFSIZE);
 	strncpy(sct, connect_average (stat->source_connect_time, stat->source_connections + info.num_sources, timebuf), BUFSIZE);
@@ -239,8 +239,8 @@ void write_hourly_stats(statistics_t *stat)
 void update_daily_statistics(statistics_t *stat)
 {
 	thread_mutex_lock(&info.misc_mutex);
-	info.daily_stats.read_bytes += (stat->read_bytes / 1000);
-	info.daily_stats.write_bytes += (stat->write_bytes / 1000);
+	info.daily_stats.read_bytes += (stat->read_bytes);
+	info.daily_stats.write_bytes += (stat->write_bytes);
 	info.daily_stats.client_connections += stat->client_connections;
 	info.daily_stats.source_connections += stat->source_connections;
 	info.daily_stats.client_connect_time += stat->client_connect_time;
@@ -263,11 +263,9 @@ void get_daily_stats (statistics_t *stat)
 void update_total_statistics(statistics_t *stat)
 {
 	thread_mutex_lock(&info.misc_mutex);
-	info.total_stats.read_bytes += (stat->read_bytes / 1000);
-	info.total_stats.read_kilos += (stat->read_bytes);
+	info.total_stats.read_bytes += (stat->read_bytes);
 
-	info.total_stats.write_bytes += (stat->write_bytes / 1000);
-	info.total_stats.write_kilos += (stat->write_bytes);
+	info.total_stats.write_bytes += (stat->write_bytes);
 
 	info.total_stats.client_connections += stat->client_connections;
 	info.total_stats.source_connections += stat->source_connections;
@@ -283,7 +281,7 @@ void write_daily_stats(statistics_t *stat)
 	char timebuf[BUFSIZE];
 
 	get_current_stats(&running);
-	add_stats(stat, &running, 0);
+	add_stats(stat, &running);
 
 	strncpy(cct, connect_average (stat->client_connect_time, stat->client_connections + info.num_clients, timebuf), BUFSIZE);
 	strncpy(sct, connect_average (stat->source_connect_time, stat->source_connections + info.num_sources, timebuf), BUFSIZE);
@@ -331,13 +329,9 @@ void get_running_stats_proc (statistics_t *stat, int lock)
 {
 	statistics_t bufstat;
 
-// megabytes
+// bytes
 	stat->read_bytes = info.total_stats.read_bytes;
 	stat->write_bytes = info.total_stats.write_bytes;
-
-// kilobytes
-	stat->read_kilos = info.total_stats.read_kilos;
-	stat->write_kilos = info.total_stats.write_kilos;
 
 	stat->client_connections = info.total_stats.client_connections;
 	stat->source_connections = info.total_stats.source_connections;
@@ -346,15 +340,15 @@ void get_running_stats_proc (statistics_t *stat, int lock)
 	
 // bytes
 	get_current_stats_proc (&bufstat, lock);
-	add_stats(stat, &bufstat, 0);
+	add_stats(stat, &bufstat);
 
 // bytes
 	get_hourly_stats(&bufstat);
-	add_stats(stat, &bufstat, 0);
+	add_stats(stat, &bufstat);
 	
-// kilobytes
+// bytes
 	get_daily_stats(&bufstat);
-	add_stats(stat, &bufstat, 1000);
+	add_stats(stat, &bufstat);
 }
 
 
@@ -366,10 +360,8 @@ void zero_stats(statistics_t *stat)
 	}
 
 	stat->read_bytes = 0;
-	stat->read_kilos = 0;
 
 	stat->write_bytes = 0;
-	stat->write_kilos = 0;
 
 	stat->client_connections = 0;
 	stat->source_connections = 0;
@@ -377,20 +369,10 @@ void zero_stats(statistics_t *stat)
 	stat->source_connect_time = 0;
 }
 
-void add_stats(statistics_t *target, statistics_t *source, unsigned long int factor)
+void add_stats(statistics_t *target, statistics_t *source)
 {
-	double div;
-
-	if (factor == 0)
-		div = 1000000.0;
-	else 
-		div = (1000000.0 / (double)factor);
-	
-	target->read_bytes += (unsigned long)(source->read_bytes / div);
-	target->read_kilos += (unsigned long)(source->read_bytes / (div / 1000));
-
-	target->write_bytes += (unsigned long)(source->write_bytes / div);
-	target->write_kilos += (unsigned long)(source->write_bytes / (div / 1000));
+	target->read_bytes += source->read_bytes;
+	target->write_bytes += source->write_bytes;
 
 	target->client_connections += source->client_connections;
 	target->client_connect_time += source->client_connect_time;

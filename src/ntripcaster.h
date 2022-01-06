@@ -198,10 +198,8 @@ typedef struct chunkSt
 
 typedef struct statistics_St
 {
-	unsigned long int read_bytes;   /* Bytes read from encoder(s) */
-  unsigned long int read_kilos;   /* Kilos read from encoder(s) */
-	unsigned long int write_bytes;  /* Bytes written to client(s) */
-  unsigned long int write_kilos;  /* Kilos written to client(s) */
+	unsigned long long read_bytes;   /* Bytes read from encoder(s) */
+	unsigned long long write_bytes;  /* Bytes written to client(s) */
 	unsigned long int client_connections; /* Number of connects from clients */
 	unsigned long int source_connections; /* Number of connects from sources */
 	unsigned long int client_connect_time; /* Total sum of the time each client has been connected (minutes) */
@@ -238,7 +236,7 @@ typedef struct client_St {
 	int cid;
 	int alive;
 	client_type_t type;
-	unsigned long int write_bytes;	/* Number of bytes written to client */
+	unsigned long long write_bytes;	/* Number of bytes written to client */
 	int virgin;
 	source_t *source;        /* Pointer back to the source */
 } client_t;

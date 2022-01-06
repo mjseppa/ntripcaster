@@ -445,24 +445,24 @@ void timesince(unsigned long start, char* target)
 }
 
 
-void b_to_string(unsigned long size, char* target)
+void b_to_string(unsigned long long size, char* target)
 {
-	unsigned long tempsize = size;
+	unsigned long long tempsize = size;
 	if (tempsize < 1025)
 	{
-		sprintf(target, "%lu b", tempsize);
+		sprintf(target, "%llu b", tempsize);
 		return;
 	}
 	tempsize = tempsize>>10;
 	if (tempsize < 1025)
 	{
-		sprintf(target, "%lu kb", tempsize);
+		sprintf(target, "%llu kb", tempsize);
 		return;
 	}
 	tempsize = tempsize>>10;
 	if (tempsize < 1025)
 	{
-		sprintf(target, "%lu Mb", tempsize);
+		sprintf(target, "%llu Mb", tempsize);
 		return;
 	}
 	double gsize = tempsize/1024.0;
@@ -487,8 +487,8 @@ void send_sourcestats (connection_t *con) {
 		{
 			count++;
 			timesince(conn->connect_time, uptime);
-			b_to_string((conn->food.source->stats.read_kilos<<10) + conn->food.source->stats.read_bytes, readsize);
-			sock_write_line (con->sock, "%s, Clients %d, Uptime: %s, Read data: %s", conn->food.source->audiocast.mount, conn->food.source->num_clients, uptime, readsize);
+			b_to_string((conn->food.source->stats.read_bytes), readsize);
+			sock_write_line (con->sock, "%s, %s, Clients %d, Uptime: %s, Read data: %s", conn->food.source->audiocast.mount, conn->host, conn->food.source->num_clients, uptime, readsize);
 			avl_traverser trav_cli = {0};
 			connection_t *conn_cli;
 			if (conn->food.source->num_clients > 0)
@@ -503,7 +503,7 @@ void send_sourcestats (connection_t *con) {
 				sourceaddr = inet_ntoa(conn_cli->sin->sin_addr);
 				timesince(conn_cli->connect_time, uptime);
 				b_to_string(conn_cli->food.client->write_bytes, readsize);
-				sock_write_line (con->sock, "\t%d: %s: %s, Connect time: %s (%s)", o, conn_cli->user, sourceaddr, uptime, readsize);
+				sock_write_line (con->sock, "\t%d: %s: %s(%s), Connect time: %s (%s)", o, conn_cli->user, sourceaddr, conn_cli->hostname, uptime, readsize);
 			}
 		}
 	}
@@ -514,16 +514,17 @@ void send_sourcestats (connection_t *con) {
 	sock_write_line (con->sock, "");
 	char writesize[50], readsize[50];
 	thread_mutex_lock(&info.misc_mutex);
+	sock_write_line (con->sock, "BW: %fKB/s", info.bandwidth_usage/1024.0);
 	b_to_string(info.hourly_stats.read_bytes, readsize);
 	b_to_string(info.hourly_stats.write_bytes, writesize);
 	sock_write_line (con->sock, "Hourly sources:%d (%s), clients %d (%s)", info.hourly_stats.source_connections, readsize, info.hourly_stats.client_connections, writesize);
 	b_to_string(info.daily_stats.read_bytes, readsize);
 	b_to_string(info.daily_stats.write_bytes, writesize);
-	sock_write_line (con->sock, "Daily sources:%d (%s), clients %d (%s)", info.hourly_stats.source_connections, readsize, info.hourly_stats.client_connections, writesize);
+	sock_write_line (con->sock, "Daily sources:%d (%s), clients %d (%s)", info.daily_stats.source_connections, readsize, info.daily_stats.client_connections, writesize);
 	b_to_string(info.total_stats.read_bytes, readsize);
 	b_to_string(info.total_stats.write_bytes, writesize);
 	thread_mutex_unlock(&info.misc_mutex);
-	sock_write_line (con->sock, "Total sources:%d (%s), clients %d (%s)", info.hourly_stats.source_connections, readsize, info.hourly_stats.client_connections, writesize);
+	sock_write_line (con->sock, "Total sources:%d (%s), clients %d (%s)", info.total_stats.source_connections, readsize, info.total_stats.client_connections, writesize);
 
 	char uptime[100];
 	timesince(info.server_start_time, uptime);
