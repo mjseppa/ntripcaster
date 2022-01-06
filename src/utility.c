@@ -1152,6 +1152,7 @@ set_element configfile_settings[] =
 	{ "logfile", string_e,           "Logfile to write to", NULL },
 	{ "server_name", string_e,	 "Server's hostname", NULL},
 	{ "statuspage_login", string_e,   "Statuspage username:pass", NULL},
+	{ "statuspage_adminlogin", string_e,   "Statuspage username:pass for management", NULL},
 	{ "max_clients_per_source", integer_e, "Max number of clients listening on one source", NULL},
 	{ "location", string_e, "NtripCaster server geographical location", NULL},
 	{ "rp_email", string_e, "Resposible person email", NULL},
@@ -1171,6 +1172,7 @@ setup_config_file_settings()
 	configfile_settings[x++].setting = &info.logfilename;
 	configfile_settings[x++].setting = &info.server_name;
 	configfile_settings[x++].setting = &info.statuspage_login;
+	configfile_settings[x++].setting = &info.statuspage_adminlogin;
 	configfile_settings[x++].setting = &info.max_clients_per_source;
 	configfile_settings[x++].setting = &info.location;
 	configfile_settings[x++].setting = &info.rp_email;

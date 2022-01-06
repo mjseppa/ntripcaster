@@ -175,6 +175,13 @@ void client_login(connection_t *con, char *expr)
 			send_sourcestats(con);
 			kick_not_connected (con, "Sourcestats transferred");
 		}
+		else if (info.statuspage_adminlogin && authenticate_status_request (con, &req, info.statuspage_adminlogin))
+		{
+			parse_default_config_file();
+			send_sourcestats(con); // TODO, admin page to manage connections
+			sock_write_line (con->sock, "Config updated");
+			kick_not_connected (con, "Sourcestats transferred and config updated");
+		}
 		else
 		{
 			write_401 (con, req.path);

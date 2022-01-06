@@ -281,6 +281,7 @@ typedef struct {
 	char *myhostname;	/* NULL unless bind to specific ip */
 	char *server_name;	/* Server name */
 	char *statuspage_login;  /* Status username:password */
+	char *statuspage_adminlogin;  /* Status username:password for  management */
 	char *version;
 	char *ntrip_version;
 	char *timezone;
